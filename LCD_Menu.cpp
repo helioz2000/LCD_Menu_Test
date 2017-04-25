@@ -1,11 +1,47 @@
 
+//#include <SoftwareSerial.h>
+
 #include "LiquidCrystal_PCF8574.h"
 #include "LCD_Menu.h"
 
-LCD_Menu::LCD_Menu() {
-  _menu_item_display_line_1 = 1;
-  _total_menu_items = 0;
+extern LiquidCrystal_PCF8574 lcd;
+extern void debug(char *sFmt, ...);
+
+LCD_Menu::LCD_Menu(uint8_t rows, uint8_t columns) {
+  _menu_item_first_visible = 1;
+  _menu_items_count = 0;
   _menu_item_selected = 0;
+  _lcd_columns = columns;
+  _lcd_rows = rows;
+}
+
+void LCD_Menu::setMenuItems(menu_item* menuitems, uint8_t number_of_items) {
+  _menuitems = menuitems;
+  _menu_items_count = number_of_items;
+}
+
+void LCD_Menu::updateLCD() {  
+  int row, menuitem = _menu_item_first_visible-1;
+  lcd.clear();
+  for (row = 0; row < _lcd_rows; row++) {
+    lcd.setCursor(0,row);
+    lcd.print(_menuitems[menuitem++].text);
+  }
+}
+
+void LCD_Menu::moveMenu(bool down) {
+  //debug("First Visible: %d (%d, %d)\n", _menu_item_first_visible, _menu_items_count, _lcd_rows);
+  if (down) {
+    if (_menu_item_first_visible <= (_menu_items_count - _lcd_rows) ) {
+      _menu_item_first_visible++;
+      updateLCD();
+    }
+  } else {  // up  
+    if (_menu_item_first_visible > 1) {
+      _menu_item_first_visible--;
+      updateLCD();
+    }
+  }
 }
 
 /* Raw code from forum.arduino.cc
