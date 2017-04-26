@@ -17,8 +17,23 @@ class LCD_Menu {
     LCD_Menu(uint8_t rows, uint8_t columns);
     void setMenuItems(menu_item* menuitems, uint8_t number_of_items);
     void updateLCD();
-    void moveMenu(bool down);
+    void uiUp();
+    void uiDown();
+    void uiSelect(bool longPress);
+    bool getEditMode();
+    int  getSelectedMenuItem();
+
+    void setCallbackValueChange(void (*changeMenuItemValue)(int));
+    void setCallbackValueGet(int (*getMenuItemValue)(int));
+    
   private:
+    void (*_changeMenuItemValue)(int);
+    int (*_getMenuItemValue)(int);
+    void _moveMenu(bool down);
+    void _setEditMode(bool enable);
+    void _updateCursor();
+    void _updateSelectedMenuItemValue();
+    bool _edit_mode;
     uint8_t _lcd_rows;
     uint8_t _lcd_columns;
     uint8_t _menu_item_first_visible;

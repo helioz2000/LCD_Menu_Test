@@ -16,21 +16,28 @@
 #define BUTTON2 A2
 #define BUTTON3 A3
 
+#define BUTTON_DEBOUNCE_TIME 150         // ms
+#define BUTTON_LONGPRESS_TIME 600       // ms
+
 #define MENU_ITEM_COUNT 8
 menu_item menucontents[MENU_ITEM_COUNT] = {
   {"Menu Line 1", 12, 0, 1},
-  {"Menu Line 2", 12, 1, 5},
-  {"Menu Line 3", 12, 1, 10},
-  {"Menu Line 4", 12, 2, 20},
-  {"Menu Line 5", 12, 3, 30},
-  {"Menu Line 6", 12, 4, 40},
-  {"Menu Line 7", 12, 5, 50},
-  {"Menu Line 8", 12, 6, 60}
+  {"Menu Line 2", 13, 1, 5},
+  {"Menu Line 3", 14, 1, 10},
+  {"Menu Line 4", 15, 2, 20},
+  {"Menu Line 5", 16, 3, 30},
+  {"Menu Line 6", 15, 4, 40},
+  {"Menu Line 7", 14, 5, 50},
+  {"Menu Line 8", 13, 6, 60}
 };
+
+int values[MENU_ITEM_COUNT] = { 10, 50, 100, 300, 412, 1254, 9335, 834 };
 
 LiquidCrystal_PCF8574 lcd(LCD_I2C_ADDRESS);  // set the LCD address 
 LCD_Menu menu(LCD_ROWS, LCD_COLUMNS);
 bool button1shadow, button2shadow, button3shadow;
+unsigned long button3time;
+bool buttonDebounce;
 
 // print debug output on console interface
 void debug(char *sFmt, ...)
@@ -59,6 +66,8 @@ void setup_LCD() {
 
   lcd.begin(LCD_COLUMNS, LCD_ROWS); // initialize the lcd
   lcd.setBacklight(1);
+  lcd.noCursor();
+  lcd.noBlink();
   lcd.home();
   lcd.clear();  
 }
@@ -84,16 +93,40 @@ void setup() {
   button1shadow = false;
   button2shadow = false;
   button3shadow = false;
-  
+
+  menu.setCallbackValueChange(menuItemValueChange);
+  menu.setCallbackValueGet(menuItemValueGet);
   menu.updateLCD();
 }
 
+void menuItemValueChange(int change) {
+  int selectedItem = menu.getSelectedMenuItem();
+  if (selectedItem < 1) return;   // noting selected
+  selectedItem--;   // convert to zero based index
+  switch (change) {
+    case 1:   // up
+      values[selectedItem]++;
+      break;
+    case 2:   // down
+      values[selectedItem]--;
+      break;
+    default:
+      break;
+  }
+}
+
+int menuItemValueGet(int menuItem) {
+  return (values[menuItem-1]);
+}
+
 void loop() {
+  
   if(!digitalRead(BUTTON1)) {
     if (!button1shadow) {
       //debug("Button 1 activated\n");
       button1shadow = true;
-      menu.moveMenu(true);
+      menu.uiDown();
+      buttonDebounce = true;
     }
   } else {
       button1shadow = false;
@@ -103,11 +136,36 @@ void loop() {
     if (!button2shadow) {
       //debug("Button 2 activated\n");
       button2shadow = true;
-      menu.moveMenu(false);
+      menu.uiUp();
+      buttonDebounce = true;
     }
   } else {
     button2shadow = false;
   }
+
+  if(!digitalRead(BUTTON3)) {
+    if (!button3shadow) {
+      //debug("Button 3 activated\n");
+      button3shadow = true;
+      button3time = millis();
+      
+    }
+  } else {
+    if (button3shadow) {
+      if ((millis() - button3time) < BUTTON_LONGPRESS_TIME) {
+        menu.uiSelect(false);
+      } else {
+        menu.uiSelect(true);  // long press
+      }
+    }
+    button3shadow = false;
+  }
+
+  if (buttonDebounce) 
+    {
+      delay(BUTTON_DEBOUNCE_TIME);
+      buttonDebounce=false;
+    }
 }
 
 void lcdPrint(char *sFmt, ...)

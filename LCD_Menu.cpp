@@ -13,11 +13,13 @@ LCD_Menu::LCD_Menu(uint8_t rows, uint8_t columns) {
   _menu_item_selected = 0;
   _lcd_columns = columns;
   _lcd_rows = rows;
+  _edit_mode = false;
 }
 
 void LCD_Menu::setMenuItems(menu_item* menuitems, uint8_t number_of_items) {
   _menuitems = menuitems;
   _menu_items_count = number_of_items;
+  //debug("set count: %d\n", _menu_items_count);
 }
 
 void LCD_Menu::updateLCD() {  
@@ -25,11 +27,84 @@ void LCD_Menu::updateLCD() {
   lcd.clear();
   for (row = 0; row < _lcd_rows; row++) {
     lcd.setCursor(0,row);
-    lcd.print(_menuitems[menuitem++].text);
+    lcd.print(_menuitems[menuitem].text);
+    lcd.setCursor(_menuitems[menuitem].datacolumn, row);
+    lcd.print(_getMenuItemValue(menuitem+1));
+    menuitem++;
   }
 }
 
-void LCD_Menu::moveMenu(bool down) {
+void LCD_Menu::uiUp() {
+  if (!_edit_mode) {
+    _moveMenu(false);
+    return;
+  }
+
+  // edit mode
+  _changeMenuItemValue(1);
+  _updateSelectedMenuItemValue();
+}
+
+void LCD_Menu::uiDown() {
+  if (!_edit_mode) {
+    _moveMenu(true);
+    return;
+  }  
+
+  // edit mode
+  _changeMenuItemValue(2);
+  _updateSelectedMenuItemValue();
+}
+
+void LCD_Menu::uiSelect(bool longPress) {
+  //debug("_uiSelect %d\n", longPress);
+  if (!_edit_mode) {
+    _setEditMode(true);
+    return;
+  } 
+  
+  // edit mode is already active
+
+  // finish editing?
+  if (longPress) {
+    _setEditMode(false);
+    return;
+  }
+
+  // move to next menu item
+  // increment menu item and check if still in range
+  if (++_menu_item_selected > (_menu_items_count)) {
+    _menu_item_selected = 1;
+    //debug("selected reset: %d\n", _menu_item_selected, _menu_items_count);
+  }
+
+  //debug("selected: %d of %d\n", _menu_item_selected, _menu_items_count);
+  
+  // selected menu item visible?
+  if (_menu_item_selected < _menu_item_first_visible) {
+    _menu_item_first_visible = _menu_item_selected;
+    //debug("visible: %d selected: %d\n", _menu_item_first_visible, _menu_item_selected);
+    updateLCD();
+  }
+  if (_menu_item_selected >= (_menu_item_first_visible + _lcd_rows) ) {
+    _moveMenu(true);
+  }
+  _updateCursor();
+}
+
+bool LCD_Menu::getEditMode() {
+  return _edit_mode;
+}
+
+void LCD_Menu::_updateSelectedMenuItemValue() {
+  lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible));
+  lcd.print("     ");
+  lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible));
+  lcd.print(_getMenuItemValue(_menu_item_selected));
+  lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible));
+}
+
+void LCD_Menu::_moveMenu(bool down) {
   //debug("First Visible: %d (%d, %d)\n", _menu_item_first_visible, _menu_items_count, _lcd_rows);
   if (down) {
     if (_menu_item_first_visible <= (_menu_items_count - _lcd_rows) ) {
@@ -42,6 +117,46 @@ void LCD_Menu::moveMenu(bool down) {
       updateLCD();
     }
   }
+}
+
+void LCD_Menu::_setEditMode(bool enable) {
+  //debug("_setEditMode %d\n", enable);
+  // do we need to change edit mode?
+  if (enable == getEditMode()) return;
+
+  // edit on
+  if (enable) {
+    _edit_mode = true;
+    _menu_item_selected = _menu_item_first_visible;
+  } else {  // edit off
+    _edit_mode = false;
+    _menu_item_selected = 0;
+  }
+  _updateCursor();
+}
+
+void LCD_Menu::_updateCursor() {
+  lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible) );
+  if (_edit_mode) {
+    lcd.blink();
+  } else {
+    lcd.noBlink();
+  }
+}
+
+int LCD_Menu::getSelectedMenuItem()
+{
+  return(_menu_item_selected);    // 0 = none
+}
+
+void LCD_Menu::setCallbackValueChange(void (*changeMenuItemValue)(int))
+{
+  _changeMenuItemValue = changeMenuItemValue;
+}
+
+void LCD_Menu::setCallbackValueGet(int (*getMenuItemValue)(int))
+{
+  _getMenuItemValue = getMenuItemValue;
 }
 
 /* Raw code from forum.arduino.cc
