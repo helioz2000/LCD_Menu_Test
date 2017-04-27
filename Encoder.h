@@ -4,15 +4,14 @@
 
 #include <Arduino.h>
 
-extern void debug(char *sFmt, ...);
-
+// Encoder pins
 #define ENCODER_A 18
 #define ENCODER_B 17
 
 volatile byte state_ISR;
 volatile int8_t count_ISR;
 
-volatile unsigned long test_l;
+// extern void debug(char *sFmt, ...);
 
 void startTimer2()  // start TIMER2 interrupts
 {
@@ -38,17 +37,17 @@ int8_t readEncoder()
 { // this function is called within timer interrupt to read one encoder!
   int8_t result=0;
   byte state=state_ISR;
-  state= state<<2 | (byte)digitalRead(ENCODER_A)<<1 | (byte)digitalRead(ENCODER_A); 
+  state= state<<2 | (byte)digitalRead(ENCODER_A)<<1 | (byte)digitalRead(ENCODER_B); 
   state= state & 0xF;   // keep only the lower 4 bits
-  /* // next two lines would be code to read 'quarter steps'
+  /*// next two lines would be code to read 'quarter steps'
   if (state==0b0001 || state==0b0111 || state==0b1110 || state==0b1000) result= -1;
   else if (state==0b0010 || state==0b1011 || state==0b1101 || state==0b0100) result= 1;
   */
   // next two lines is code to read 'full steps'
   if (state==0b0001) result= -1;
   else if (state==0b0010) result= 1;
+  
   state_ISR = state;
-  if (result != 0) test_l++;
   return result;
 }
 
@@ -58,30 +57,28 @@ void beginEncoder()
   pinMode(ENCODER_B, INPUT_PULLUP);
   readEncoder(); // Initialize start condition
   startTimer2();
-  debug("Timer Started %d\n", count_ISR);
-  test_l = 0;
 }
 
+// called from main program
+// returns true if we have seen encoder pulses since last call
+// delta contains the number encoder pulses since last call 
 boolean updateEncoders(int8_t *delta)
-{ // read all the 'volatile' ISR variables and copy them into normal variables
-  //debug("count ISR: %d\n", count_ISR);
-  boolean changeState=false;
+{ // read the 'volatile' ISR variables and pass it onto calling function
+
   if (count_ISR!=0)
   {
-    changeState=true;
     noInterrupts();
-    //*delta = count_ISR;
+    *delta = count_ISR;
     count_ISR=0;
     interrupts();
-  } else {
-    //*delta = 0;
-  }
-  return changeState;
+    return true;
+  } 
+  *delta = 0;
+  return false;
 }
 
 
 ISR(TIMER2_COMPA_vect)  // handling of TIMER2 interrupts
 {
   count_ISR += readEncoder();
-  
 }

@@ -33,23 +33,24 @@
 
 #define MENU_ITEM_COUNT 8
 menu_item menucontents[MENU_ITEM_COUNT] = {
-  {"Menu Line 1", 12, 0, 1},
-  {"Menu Line 2", 13, 1, 5},
-  {"Menu Line 3", 14, 1, 10},
-  {"Menu Line 4", 15, 2, 20},
-  {"Menu Line 5", 16, 3, 30},
-  {"Menu Line 6", 15, 4, 40},
-  {"Menu Line 7", 14, 5, 50},
-  {"Menu Line 8", 13, 6, 60}
+  {"Menu Line 1", 12, 0, 10},
+  {"Menu Line 2", 12, 1, 30},
+  {"Menu Line 3", 12, 1, 100},
+  {"Menu Line 4", 12, 2, 500},
+  {"Menu Line 5", 12, 3, 300},
+  {"Menu Line 6", 12, 4, 1300},
+  {"Menu Line 7", 12, 5, 10000},
+  {"Menu Line 8", 12, 6, 900}
 };
 
-int values[MENU_ITEM_COUNT] = { 10, 50, 100, 300, 412, 1254, 9335, 834 };
+int values[MENU_ITEM_COUNT] = { 10, 25, 50, 300, 150, 1254, 9335, 834 };
 
 LiquidCrystal_PCF8574 lcd(LCD_I2C_ADDRESS);  // set the LCD address 
 LCD_Menu menu(LCD_ROWS, LCD_COLUMNS);
 bool button1shadow, button2shadow, button3shadow;
 unsigned long button3time;
 bool buttonDebounce;
+int8_t delta;
 
 // print debug output on console interface
 void debug(char *sFmt, ...)
@@ -106,15 +107,12 @@ void setup() {
   button2shadow = false;
   button3shadow = false;
 
-  pinMode(BUTTON4, INPUT);
-  digitalWrite(BUTTON4, HIGH);
+  
+  // initialize Rotary Encoder
+  pinMode(BUTTON4, INPUT_PULLUP);
+  //digitalWrite(BUTTON4, HIGH);
 
   beginEncoder();
-
-  pinMode(LED3, OUTPUT);
-  pinMode(LED4, OUTPUT);
-  digitalWrite(LED3, LED_OFF);
-  digitalWrite(LED4, LED_OFF);
   
   menu.setCallbackValueChange(menuItemValueChange);
   menu.setCallbackValueGet(menuItemValueGet);
@@ -142,7 +140,12 @@ int menuItemValueGet(int menuItem) {
   return (values[menuItem-1]);
 }
 
-uint8_t delta;
+void rangeCheck(int selectedItem) {
+  if (values[selectedItem] > menucontents[selectedItem].datamax)
+    values[selectedItem] = menucontents[selectedItem].datamax;
+  if  (values[selectedItem] < menucontents[selectedItem].datamin)
+    values[selectedItem] = menucontents[selectedItem].datamin;
+}
 
 void loop() {
   
@@ -186,27 +189,20 @@ void loop() {
     button3shadow = false;
   }
 
-  digitalWrite(LED3, digitalRead(ENCODER_A));
-  digitalWrite(LED4, digitalRead(ENCODER_B));
-
-  if (buttonDebounce) 
-    {
+  if (buttonDebounce) {
       delay(BUTTON_DEBOUNCE_TIME);
       buttonDebounce=false;
     }
 
+  // has the encoder value been updated?
   if (updateEncoders(&delta)) {
-    debug("delta: %d\n",delta);
-  }
-
-  delay(1000);
-  Serial.println(test_l);
-  /*
-  if (valueHasChanged) {
+    int selectedItem = menu.getSelectedMenuItem();
+    if (selectedItem < 1) return;   // noting selected
+    selectedItem--;   // convert to zero based index
+    values[selectedItem] += delta;
+    rangeCheck(selectedItem);  
     menu.updateSelectedMenuItemValue();
-    valueHasChanged = false;
-  }
-  */
+  }  
 }
 
 void lcdPrint(char *sFmt, ...)
