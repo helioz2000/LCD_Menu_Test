@@ -5,6 +5,7 @@
 #include <Wire.h> 
 #include "LiquidCrystal_PCF8574.h"
 #include "LCD_Menu.h"
+#include "Encoder.h"
 
 #define SERIAL_BAUDRATE 19200 // For console interface
 
@@ -12,12 +13,23 @@
 #define LCD_ROWS 4
 #define LCD_COLUMNS 20    // Characters per line
 
+// Pin definitions
+// Multifunction Board 
 #define BUTTON1 A1
 #define BUTTON2 A2
 #define BUTTON3 A3
+#define LED3 11
+#define LED4 10
+#define LED_ON LOW
+#define LED_OFF HIGH
 
-#define BUTTON_DEBOUNCE_TIME 150         // ms
-#define BUTTON_LONGPRESS_TIME 600       // ms
+// Encoder
+#define BUTTON4 14
+
+
+
+#define BUTTON_DEBOUNCE_TIME 150UL         // ms
+#define BUTTON_LONGPRESS_TIME 600UL       // ms
 
 #define MENU_ITEM_COUNT 8
 menu_item menucontents[MENU_ITEM_COUNT] = {
@@ -94,9 +106,20 @@ void setup() {
   button2shadow = false;
   button3shadow = false;
 
+  pinMode(BUTTON4, INPUT);
+  digitalWrite(BUTTON4, HIGH);
+
+  beginEncoder();
+
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+  digitalWrite(LED3, LED_OFF);
+  digitalWrite(LED4, LED_OFF);
+  
   menu.setCallbackValueChange(menuItemValueChange);
   menu.setCallbackValueGet(menuItemValueGet);
   menu.updateLCD();
+
 }
 
 void menuItemValueChange(int change) {
@@ -118,6 +141,8 @@ void menuItemValueChange(int change) {
 int menuItemValueGet(int menuItem) {
   return (values[menuItem-1]);
 }
+
+uint8_t delta;
 
 void loop() {
   
@@ -143,7 +168,7 @@ void loop() {
     button2shadow = false;
   }
 
-  if(!digitalRead(BUTTON3)) {
+  if(!digitalRead(BUTTON4)) {
     if (!button3shadow) {
       //debug("Button 3 activated\n");
       button3shadow = true;
@@ -161,11 +186,27 @@ void loop() {
     button3shadow = false;
   }
 
+  digitalWrite(LED3, digitalRead(ENCODER_A));
+  digitalWrite(LED4, digitalRead(ENCODER_B));
+
   if (buttonDebounce) 
     {
       delay(BUTTON_DEBOUNCE_TIME);
       buttonDebounce=false;
     }
+
+  if (updateEncoders(&delta)) {
+    debug("delta: %d\n",delta);
+  }
+
+  delay(1000);
+  Serial.println(test_l);
+  /*
+  if (valueHasChanged) {
+    menu.updateSelectedMenuItemValue();
+    valueHasChanged = false;
+  }
+  */
 }
 
 void lcdPrint(char *sFmt, ...)

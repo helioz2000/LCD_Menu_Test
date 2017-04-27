@@ -42,7 +42,7 @@ void LCD_Menu::uiUp() {
 
   // edit mode
   _changeMenuItemValue(1);
-  _updateSelectedMenuItemValue();
+  updateSelectedMenuItemValue();
 }
 
 void LCD_Menu::uiDown() {
@@ -53,7 +53,7 @@ void LCD_Menu::uiDown() {
 
   // edit mode
   _changeMenuItemValue(2);
-  _updateSelectedMenuItemValue();
+  updateSelectedMenuItemValue();
 }
 
 void LCD_Menu::uiSelect(bool longPress) {
@@ -96,7 +96,7 @@ bool LCD_Menu::getEditMode() {
   return _edit_mode;
 }
 
-void LCD_Menu::_updateSelectedMenuItemValue() {
+void LCD_Menu::updateSelectedMenuItemValue() {
   lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible));
   lcd.print("     ");
   lcd.setCursor(_menuitems[_menu_item_selected-1].datacolumn, (_menu_item_selected - _menu_item_first_visible));

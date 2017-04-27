@@ -22,6 +22,7 @@ class LCD_Menu {
     void uiSelect(bool longPress);
     bool getEditMode();
     int  getSelectedMenuItem();
+    void updateSelectedMenuItemValue();
 
     void setCallbackValueChange(void (*changeMenuItemValue)(int));
     void setCallbackValueGet(int (*getMenuItemValue)(int));
@@ -32,7 +33,7 @@ class LCD_Menu {
     void _moveMenu(bool down);
     void _setEditMode(bool enable);
     void _updateCursor();
-    void _updateSelectedMenuItemValue();
+    
     bool _edit_mode;
     uint8_t _lcd_rows;
     uint8_t _lcd_columns;
