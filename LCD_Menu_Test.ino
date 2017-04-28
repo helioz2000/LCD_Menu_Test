@@ -110,7 +110,6 @@ void setup() {
   
   // initialize Rotary Encoder
   pinMode(BUTTON4, INPUT_PULLUP);
-  //digitalWrite(BUTTON4, HIGH);
 
   beginEncoder();
   
